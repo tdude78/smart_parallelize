@@ -64,7 +64,6 @@ def smart_parallelize(func, n_vars2parallelize=1):
                 kwargs.update(kwargs2)
             except NameError:
                 pass
-
             return f2(**kwargs)
         
         arg2parallelize = kwargs[list(kwargs.keys())[0]]
@@ -80,6 +79,8 @@ def smart_parallelize(func, n_vars2parallelize=1):
 
         workers = []
         for i in range(len(arg2parallelize)):
+            if len(arg2parallelize[i]) == 0:
+                continue
             par_arg    = {list(kwargs.keys())[0]:arg2parallelize[i]}
             workers.append(get_results.remote(**par_arg))
         result = ray.get(workers)
