@@ -25,7 +25,6 @@ try:
 except RaySystemError:
 	MEMORY, CPUS, MEM_PER_WORKER = get_mem_func()
 
-
 def smart_parallelize(func, n_vars2parallelize=1): 
     '''FIRST ARG MUST BE ARG TO BE PARALLELIZED'''
 
