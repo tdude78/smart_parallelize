@@ -6,19 +6,23 @@ from ray.exceptions import RaySystemError
 
 
 def get_mem_func():
-	MEMORY = ray.available_resources()['memory']
-	try:
-		CPUS = ray.available_resources()['CPU']
-		MEM_PER_WORKER = (MEMORY / CPUS) * 0.8
-	except KeyError:
-		# get number of cores
-		import multiprocessing
-		CPUS = multiprocessing.cpu_count()
-		MEM_PER_WORKER = (MEMORY / CPUS) * 0.8
-	MEMORY = int(MEMORY)
-	CPUS   = int(CPUS)
-	MEM_PER_WORKER = int(MEM_PER_WORKER)
-	return MEMORY, CPUS, MEM_PER_WORKER
+    try:
+        MEMORY = ray.available_resources()['memory']
+    except ray.exceptions.RaySystemError:
+        ray.init()
+        MEMORY = ray.available_resources()['memory']
+    try:
+        CPUS = ray.available_resources()['CPU']
+        MEM_PER_WORKER = (MEMORY / CPUS) * 0.8
+    except KeyError:
+        # get number of cores
+        import multiprocessing
+        CPUS = multiprocessing.cpu_count()
+        MEM_PER_WORKER = (MEMORY / CPUS) * 0.8
+    MEMORY = int(MEMORY)
+    CPUS   = int(CPUS)
+    MEM_PER_WORKER = int(MEM_PER_WORKER)
+    return MEMORY, CPUS, MEM_PER_WORKER
 
 try:
 	MEMORY, CPUS, MEM_PER_WORKER = get_mem_func()
