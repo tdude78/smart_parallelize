@@ -34,7 +34,6 @@ def smart_parallelize(func):
 
     def wrap(**kwargs): 
         def f2(**kwargs):
-            print(kwargs)
             par_args = list(kwargs.keys())[:n_args2parallelize]
             data_par_args = [kwargs[i] for i in par_args]
             results = []
@@ -42,7 +41,6 @@ def smart_parallelize(func):
                 kwargs_0 = kwargs.copy()
                 for j, _ in enumerate(data_par_args):
                     kwargs_0[par_args[j]] = data_par_args[j][i]
-                print('kwargs_0', kwargs_0)
                 r = func(**kwargs_0)
                 results.append(r)
             return results
