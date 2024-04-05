@@ -34,6 +34,7 @@ def smart_parallelize(func):
 
     def wrap(**kwargs): 
         def f2(**kwargs):
+            print(kwargs)
             par_args = list(kwargs.keys())[:n_args2parallelize]
             data_par_args = [kwargs[i] for i in par_args]
             results = []
@@ -41,6 +42,7 @@ def smart_parallelize(func):
                 kwargs_0 = kwargs.copy()
                 for j, _ in enumerate(data_par_args):
                     kwargs_0[par_args[j]] = data_par_args[j][i]
+                print('kwargs_0', kwargs_0)
                 r = func(**kwargs_0)
                 results.append(r)
             return results
@@ -101,7 +103,7 @@ def smart_parallelize(func):
                 for k in range(n_outputs):
                     try:
                         results[k].append(result[i][j][k])
-                    except TypeError:
+                    except (TypeError, IndexError):
                         results[k].append(result[i][j])
         return results
     return wrap 
@@ -113,11 +115,12 @@ if __name__ == "__main__":
 
     @smart_parallelize
     def func(x, y):
+        x = np.sum(x)
         fnc = lambda x: np.exp(-x*y)
         return quad(fnc, 0, x)[0]
     
-    x = np.ones((25,))
-    y = np.ones((25,))*2
+    x = np.ones((30,2))
+    y = np.ones((30,))*2
     # y = 2
     start  = timeit.default_timer()
     answer = func(x=x, y=y, n_args2parallelize=2)
