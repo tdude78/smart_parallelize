@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "smart-parallelize"
-version = "1.0.7"
+version = "2.0.0"
 description = ""
 authors = ["Truman DeWalch <trumandewalch@gmail.com>"]
 readme = "README.md"
