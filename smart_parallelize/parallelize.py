@@ -36,6 +36,9 @@ def smart_parallelize(func):
         def f2(**kwargs):
             par_args = list(kwargs.keys())[:n_args2parallelize]
             data_par_args = [kwargs[i] for i in par_args]
+
+            fnc = np.vectorize(func)
+            print(fnc(**kwargs))
             results = []
             for i, _ in enumerate(data_par_args[0]):
                 kwargs_0 = kwargs.copy()
@@ -43,6 +46,7 @@ def smart_parallelize(func):
                     kwargs_0[par_args[j]] = data_par_args[j][i]
                 r = func(**kwargs_0)
                 results.append(r)
+            print(results)
             return results
         @ray.remote(memory=MEM_PER_WORKER)
         def get_results(**kwargs):
