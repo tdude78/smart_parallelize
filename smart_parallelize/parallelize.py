@@ -38,15 +38,16 @@ def smart_parallelize(func):
             data_par_args = [kwargs[i] for i in par_args]
 
             fnc = np.vectorize(func)
-            print(fnc(**kwargs))
+            print('fnc', fnc(**kwargs))
             results = []
             for i, _ in enumerate(data_par_args[0]):
                 kwargs_0 = kwargs.copy()
                 for j, _ in enumerate(data_par_args):
                     kwargs_0[par_args[j]] = data_par_args[j][i]
                 r = func(**kwargs_0)
+                print('r', r)
                 results.append(r)
-            print(results)
+            print('results', results)
             return results
         @ray.remote(memory=MEM_PER_WORKER)
         def get_results(**kwargs):
@@ -91,22 +92,26 @@ def smart_parallelize(func):
             workers.append(get_results.remote(**par_arg))
         result = ray.get(workers)
 
-        r_test = result[0][0]
-        try:
-            n_outputs = len(r_test)
-        except TypeError:
-            n_outputs = 1
-
         results = []
-        for i in range(n_outputs):
-            results.append([])
-        for i in range(len(result)):
-            for j in range(len(result[i])):
-                for k in range(n_outputs):
-                    try:
-                        results[k].append(result[i][j][k])
-                    except (TypeError, IndexError):
-                        results[k].append(result[i][j])
+        for i in range(CPUS):
+            for output in result[i]:
+                results.append(output)
+        # r_test = result[0][0]
+        # try:
+        #     n_outputs = len(r_test)
+        # except TypeError:
+        #     n_outputs = 1
+
+        # results = []
+        # for i in range(n_outputs):
+        #     results.append([])
+        # for i in range(len(result)):
+        #     for j in range(len(result[i])):
+        #         for k in range(n_outputs):
+        #             try:
+        #                 results[k].append(result[i][j][k])
+        #             except (TypeError, IndexError):
+        #                 results[k].append(result[i][j])
         return results
     return wrap 
 
@@ -116,26 +121,24 @@ if __name__ == "__main__":
     from scipy.integrate import quad
 
     @smart_parallelize
-    def func(x, y):
-        x = np.sum(x)
-        fnc = lambda x: np.exp(-x*y)
-        return quad(fnc, 0, x)[0]
+    def func(x):
+        return x
     
     x = np.ones((30,2))
     y = np.ones((30,))*2
     # y = 2
     start  = timeit.default_timer()
-    answer = func(x=x, y=y, n_args2parallelize=2)
+    answer = func(x=x)
     stop  = timeit.default_timer()
     print(stop - start)
     print(answer)
 
 
-    start  = timeit.default_timer()
-    answer = []
-    for i, val in enumerate(x):
-        sleep(1)
-        answer.append(val+y)
-    stop = timeit.default_timer()
-    print(stop - start)
+    # start  = timeit.default_timer()
+    # answer = []
+    # for i, val in enumerate(x):
+    #     sleep(1)
+    #     answer.append(val+y)
+    # stop = timeit.default_timer()
+    # print(stop - start)
 
