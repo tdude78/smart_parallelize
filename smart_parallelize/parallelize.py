@@ -95,19 +95,16 @@ def smart_parallelize(func):
         else:
             n_outputs = 1
 
-        if n_outputs > 1:
-            results = []
-            for i in range(n_outputs):
-                results.append([])
-            for j in range(CPUS):
-                for output in result[j]:
+        results = []
+        for i in range(n_outputs):
+            results.append([])
+        for j in range(len(result)):
+            for output in result[j]:
+                if n_outputs > 1:
                     for k in range(n_outputs):
                         results[k].append(output[k])
-        else:
-            results = []
-            for j in range(CPUS):
-                for output in result[j]:
-                    results.append(output)
+                else:
+                    results[0].append(output)
 
         return results
     return wrap 
