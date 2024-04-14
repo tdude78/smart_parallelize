@@ -92,26 +92,26 @@ def smart_parallelize(func):
             workers.append(get_results.remote(**par_arg))
         result = ray.get(workers)
 
-        results = []
-        for i in range(CPUS):
-            for output in result[i]:
-                results.append(output)
-        # r_test = result[0][0]
-        # try:
-        #     n_outputs = len(r_test)
-        # except TypeError:
-        #     n_outputs = 1
+        r_test = result[0][0]
+        if isinstance(r_test, tuple):
+            n_outputs = len(r_test)
+        else:
+            n_outputs = 1
 
-        # results = []
-        # for i in range(n_outputs):
-        #     results.append([])
-        # for i in range(len(result)):
-        #     for j in range(len(result[i])):
-        #         for k in range(n_outputs):
-        #             try:
-        #                 results[k].append(result[i][j][k])
-        #             except (TypeError, IndexError):
-        #                 results[k].append(result[i][j])
+        if n_outputs > 1:
+            results = []
+            for i in range(n_outputs):
+                results.append([])
+            for j in range(CPUS):
+                for output in result[j]:
+                    for k in range(n_outputs):
+                        results[k].append(output[k])
+        else:
+            results = []
+            for j in range(CPUS):
+                for output in result[j]:
+                    results.append(output)
+
         return results
     return wrap 
 
