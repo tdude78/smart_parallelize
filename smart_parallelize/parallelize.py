@@ -40,7 +40,6 @@ def smart_parallelize(args2parallelize=1):
                 par_args = list(kwargs.keys())[:args2parallelize]
                 other_args = list(kwargs.keys())[args2parallelize:]
                 data_par_args = [kwargs[i] for i in par_args]
-                print(par_args, data_par_args)
 
                 results = []
                 for i, _ in enumerate(data_par_args[0]):
