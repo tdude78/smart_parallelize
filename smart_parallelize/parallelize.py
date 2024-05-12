@@ -84,7 +84,7 @@ def smart_parallelize(args2parallelize):
 
             # retval = retval.reshape(len(arg2parallelize_unsplit[0]), num_outputs)
 
-            retval = np.array([j for i in retval for j in i])
+            retval = np.array([j for i in retval for j in i]).T
 
             return retval
         return wrapper
