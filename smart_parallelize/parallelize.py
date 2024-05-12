@@ -31,7 +31,7 @@ except RaySystemError:
 	MEMORY, CPUS, MEM_PER_WORKER = get_mem_func()
 
 
-def smart_parallelize(args2parallelize):
+def smart_parallelize(args2parallelize=1):
     def decorator(function):
         @wraps(function)
         def wrapper(**kwargs):
@@ -75,17 +75,31 @@ def smart_parallelize(args2parallelize):
                 test_inp[par_args[j]] = arg2parallelize_unsplit[j][0]
             for k, _ in enumerate(other_args):
                 test_inp[other_args[k]] = kwargs[other_args[k]]
-            try:
-                num_outputs = len(function(**test_inp))
-            except TypeError:
+
+            output = function(**test_inp)
+            if not isinstance(output, list) and not isinstance(output, tuple):
                 num_outputs = 1
+            else:
+                num_outputs = len(output)
 
             retval = ray.get(workers)
 
             # retval = retval.reshape(len(arg2parallelize_unsplit[0]), num_outputs)
 
-            retval = np.array([j for i in retval for j in i]).T
+            retval = [j for i in retval for j in i]
 
+            if num_outputs != 1:
+                outputs = []
+                for i in range(num_outputs):
+                    outputs.append([])
+                for i, _ in enumerate(retval):
+                    for j, _ in enumerate(retval[i]):
+                        outputs[j].append(retval[i][j])
+                retval = outputs
+                for i in range(num_outputs):
+                    outputs[i] = np.array(outputs[i])
+            else:
+                retval = np.array(retval)
             return retval
         return wrapper
     return decorator
@@ -96,7 +110,7 @@ if __name__ == "__main__":
 
     @smart_parallelize(args2parallelize=1)
     def func(x, y):
-        return x + y
+        return x
     
     x = np.ones((31,2))
     # y = np.ones((30,))*2
