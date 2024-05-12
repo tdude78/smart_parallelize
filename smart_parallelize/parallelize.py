@@ -80,9 +80,11 @@ def smart_parallelize(args2parallelize):
             except TypeError:
                 num_outputs = 1
 
-            retval = np.squeeze(ray.get(workers))
+            retval = ray.get(workers)
 
-            retval = np.reshape(retval, (len(arg2parallelize_unsplit[0]), num_outputs))
+            # retval = retval.reshape(len(arg2parallelize_unsplit[0]), num_outputs)
+
+            retval = np.array([j for i in retval for j in i])
 
             return retval
         return wrapper
@@ -96,7 +98,7 @@ if __name__ == "__main__":
     def func(x, y):
         return x + y
     
-    x = np.ones((30,2))
+    x = np.ones((31,2))
     # y = np.ones((30,))*2
     y = 2
     start  = timeit.default_timer()
