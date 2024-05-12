@@ -1,8 +1,9 @@
-import ray
-import numpy as np
+from functools import wraps
 from time import sleep
-from ray.exceptions import RaySystemError
 
+import numpy as np
+import ray
+from ray.exceptions import RaySystemError
 
 
 def get_mem_func():
@@ -29,94 +30,71 @@ try:
 except RaySystemError:
 	MEMORY, CPUS, MEM_PER_WORKER = get_mem_func()
 
-def smart_parallelize(func): 
-    '''FIRST ARG MUST BE ARG TO BE PARALLELIZED'''
 
-    def wrap(**kwargs): 
-        def f2(**kwargs):
-            par_args = list(kwargs.keys())[:n_args2parallelize]
-            data_par_args = [kwargs[i] for i in par_args]
+def smart_parallelize(args2parallelize):
+    def decorator(function):
+        @wraps(function)
+        def wrapper(**kwargs):
+            @ray.remote(memory=MEM_PER_WORKER)
+            def get_results(**kwargs):
+                par_args = list(kwargs.keys())[:args2parallelize]
+                other_args = list(kwargs.keys())[args2parallelize:]
+                data_par_args = [kwargs[i] for i in par_args]
+                print(par_args, data_par_args)
 
-            fnc = np.vectorize(func)
-            results = []
-            for i, _ in enumerate(data_par_args[0]):
-                kwargs_0 = kwargs.copy()
-                for j, _ in enumerate(data_par_args):
-                    kwargs_0[par_args[j]] = data_par_args[j][i]
-                r = func(**kwargs_0)
-                results.append(r)
-            return results
-        @ray.remote(memory=MEM_PER_WORKER)
-        def get_results(**kwargs):
+                results = []
+                for i, _ in enumerate(data_par_args[0]):
+                    kwargs_0 = kwargs.copy()
+                    for j, arg in enumerate(par_args):
+                        kwargs_0[arg] = data_par_args[j][i]
+                    for k, arg in enumerate(other_args):
+                        kwargs_0[arg] = kwargs[arg]
+                    r = function(**kwargs_0)
+                    results.append(r)
+                return results
+            
+            par_args = list(kwargs.keys())[:args2parallelize]
+            other_args = list(kwargs.keys())[args2parallelize:]
+            arg2parallelize_unsplit = [kwargs[i] for i in par_args]
+
+            # split into CPUS chunks
+            split_args = [np.array_split(i, CPUS) for i in arg2parallelize_unsplit]
+
+            workers = []
+            for i in range(CPUS):
+                inp_args = {}
+                for j, _ in enumerate(par_args):
+                    inp_args[par_args[j]] = split_args[j][i]
+                
+                for k, _ in enumerate(other_args):
+                    inp_args[other_args[k]] = kwargs[other_args[k]]
+                workers.append(get_results.remote(**inp_args))
+            
+            test_inp = {}
+            for j, _ in enumerate(par_args):
+                test_inp[par_args[j]] = split_args[j][0]
+            for k, _ in enumerate(other_args):
+                test_inp[other_args[k]] = kwargs[other_args[k]]
             try:
-                args_names = ray.get(args_names_put)
-                args_vals  = ray.get(args_vals_put)
-                kwargs2 = dict(zip(args_names, args_vals))
-                kwargs.update(kwargs2)
-            except NameError:
-                pass
-            results = f2(**kwargs)
-            return results
-        
-        try:
-            n_args2parallelize = kwargs['n_args2parallelize']
-            # delete n_args2parallelize from kwargs
-            del kwargs['n_args2parallelize']
-        except KeyError:
-            n_args2parallelize = 1
+                num_outputs = len(function(**test_inp))
+            except TypeError:
+                num_outputs = 1
 
-        par_args = list(kwargs.keys())[:n_args2parallelize]
-        arg2parallelize_unsplit = [kwargs[i] for i in par_args]
+            retval = np.squeeze(ray.get(workers))
 
-        # split into CPUS chunks
-        arg2parallelize = [np.array_split(i, CPUS) for i in arg2parallelize_unsplit]
+            retval = np.reshape(retval, (len(arg2parallelize_unsplit[0]), num_outputs))
 
-        arg_names = list(kwargs.keys())[n_args2parallelize:]
-        arg_vals  = list(kwargs.values())[n_args2parallelize:]
-
-        if len(arg_names) != 0:
-            args_names_put = ray.put(arg_names)
-            args_vals_put  = ray.put(arg_vals)
-
-        workers = []
-        for i in range(len(arg2parallelize[0])):
-            if len(arg2parallelize[0][i]) == 0:
-                continue
-            # par_arg    = {list(kwargs.keys())[0]:arg2parallelize[i]}
-            par_arg = {}
-            for j in range(len(par_args)):
-                par_arg[par_args[j]] = arg2parallelize[j][i]
-            workers.append(get_results.remote(**par_arg))
-        result = ray.get(workers)
-
-        r_test = result[0][0]
-        if isinstance(r_test, tuple):
-            n_outputs = len(r_test)
-        else:
-            n_outputs = 1
-
-        results = []
-        for i in range(n_outputs):
-            results.append([])
-        for j in range(len(result)):
-            for output in result[j]:
-                if n_outputs > 1:
-                    for k in range(n_outputs):
-                        results[k].append(output[k])
-                else:
-                    results[0].append(output)
-
-        return results
-    return wrap 
+            return retval
+        return wrapper
+    return decorator
 
 
 if __name__ == "__main__":
     import timeit
-    from scipy.integrate import quad
 
-    @smart_parallelize
+    @smart_parallelize(args2parallelize=1)
     def func(x):
-        return x
+        return np.sum(x)
     
     x = np.ones((30,2))
     y = np.ones((30,))*2
@@ -126,13 +104,3 @@ if __name__ == "__main__":
     stop  = timeit.default_timer()
     print(stop - start)
     print(answer)
-
-
-    # start  = timeit.default_timer()
-    # answer = []
-    # for i, val in enumerate(x):
-    #     sleep(1)
-    #     answer.append(val+y)
-    # stop = timeit.default_timer()
-    # print(stop - start)
-
