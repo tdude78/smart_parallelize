@@ -72,7 +72,7 @@ def smart_parallelize(args2parallelize):
             
             test_inp = {}
             for j, _ in enumerate(par_args):
-                test_inp[par_args[j]] = split_args[j][0]
+                test_inp[par_args[j]] = arg2parallelize_unsplit[j][0]
             for k, _ in enumerate(other_args):
                 test_inp[other_args[k]] = kwargs[other_args[k]]
             try:
@@ -93,14 +93,14 @@ if __name__ == "__main__":
     import timeit
 
     @smart_parallelize(args2parallelize=1)
-    def func(x):
-        return np.sum(x)
+    def func(x, y):
+        return x + y
     
     x = np.ones((30,2))
-    y = np.ones((30,))*2
-    # y = 2
+    # y = np.ones((30,))*2
+    y = 2
     start  = timeit.default_timer()
-    answer = func(x=x)
+    answer = func(x=x, y=y)
     stop  = timeit.default_timer()
     print(stop - start)
     print(answer)
