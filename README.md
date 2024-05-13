@@ -1,7 +1,7 @@
 <!-- write a heading for describing this -->
 ## Description
 
-This is a simply python package for easily parallelizing functions using.
+This is a simple python package for easily parallelizing functions.
 
 <!-- put this url in https://github.com/tdude78/smart_parallelize -->
 
