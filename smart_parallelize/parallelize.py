@@ -1,19 +1,18 @@
 from functools import wraps
-from time import sleep
 
 import numpy as np
-import ray
 from ray.exceptions import RaySystemError
+from ray import available_resources, init, remote, get, put
 
 
 def get_mem_func():
     try:
-        MEMORY = ray.available_resources()['memory']
-    except ray.exceptions.RaySystemError:
-        ray.init()
-        MEMORY = ray.available_resources()['memory']
+        MEMORY = available_resources()['memory']
+    except RaySystemError:
+        init()
+        MEMORY = available_resources()['memory']
     try:
-        CPUS = ray.available_resources()['CPU']
+        CPUS = available_resources()['CPU']
         MEM_PER_WORKER = (MEMORY / CPUS) * 0.8
     except KeyError:
         # get number of cores
@@ -35,7 +34,7 @@ def smart_parallelize(args2parallelize=1):
     def decorator(function):
         @wraps(function)
         def wrapper(**kwargs):
-            @ray.remote(memory=MEM_PER_WORKER)
+            @remote(memory=MEM_PER_WORKER)
             def get_results(**kwargs):
                 par_args = list(kwargs.keys())[:args2parallelize]
                 other_args = list(kwargs.keys())[args2parallelize:]
@@ -81,7 +80,7 @@ def smart_parallelize(args2parallelize=1):
             else:
                 num_outputs = len(output)
 
-            retval = ray.get(workers)
+            retval = get(workers)
 
             # retval = retval.reshape(len(arg2parallelize_unsplit[0]), num_outputs)
 
