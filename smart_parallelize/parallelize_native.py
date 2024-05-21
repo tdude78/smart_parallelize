@@ -15,37 +15,61 @@ def smart_parallelize(func, args2parallelize, *args):
         inputs = zip(*args2par)
     with Pool() as p:
         out = p.starmap(func, inputs)
+    
+    if isinstance(out[0], list) or isinstance(out[0], np.ndarray):
+        num_outs = 1
+        out = np.array(out)
+        return out
+    else:
+        num_outs = len(out[0])
+    out_new = []
+    for i in range(num_outs):
+        out_new.append([])
+    for i, _ in enumerate(out):
+        for j in range(num_outs):
+            out_new[j].append(np.array(out[i][j]))
+    for i in range(num_outs):
+        out_new[i] = np.array(out_new[i])
+    out = tuple(out_new)
     return out
+
+def func(x, y):
+    # y = 1
+    sleep(1)
+    x = np.array(x)
+    y = np.array(y)
+
+    # print(x, y)
+    return x+y
+
+def f3(x, y, z):
+    # y = 1
+    sleep(1)
+    x = np.array(x)
+    y = np.array(y)
+
+    # print(x, y)
+    return x+y+z
+
+def f2(x):
+    y = 1
+    sleep(1)
+    x = np.array(x)
+    y = np.array(y)
+
+    return x+y
+
+def f4(x):
+    y = 1
+    sleep(1)
+    x = np.array(x)
+    y = np.array(y)
+
+    return x,y
 
 
 if __name__ == "__main__":
     import timeit
-
-    def func(x, y):
-        # y = 1
-        sleep(1)
-        x = np.array(x)
-        y = np.array(y)
-
-        print(x, y)
-        return x+y
-
-    def f3(x, y, z):
-        # y = 1
-        sleep(1)
-        x = np.array(x)
-        y = np.array(y)
-
-        print(x, y)
-        return x+y+z
-
-    def f2(x):
-        y = 1
-        sleep(1)
-        x = np.array(x)
-        y = np.array(y)
-
-        return x+y
 
     
     x = list(np.ones((20,2)))
@@ -56,6 +80,7 @@ if __name__ == "__main__":
     a1 = smart_parallelize(f2, 1, x)
     answer = smart_parallelize(func, 2, x, y)
     a3 = smart_parallelize(f3, 2, x, y, z)
+    a4 = smart_parallelize(f4, 1, x)
     
     stop  = timeit.default_timer()
     print(stop - start)
