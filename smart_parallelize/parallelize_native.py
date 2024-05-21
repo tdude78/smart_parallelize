@@ -8,11 +8,25 @@ from time import sleep
 
 def smart_parallelize(func, args2parallelize, *args):
     args2par = list(args[:args2parallelize])
-    argsnotpar = [list(args[args2parallelize:])*len(args2par[0])]
+    args2par2 = []
+    for i,a in enumerate(args2par[0]):
+        c = []
+        for i in range(args2parallelize):
+            c.append(a)
+        args2par2.append(tuple(c))
+    args2par = args2par2
+    argsnotpar = list(([args[args2parallelize:]]))*len(args2par)
+
     if len(argsnotpar[0]) != 0:
-        inputs = zip(*args2par, *argsnotpar)
+        inputs = [a+argsnotpar[i] for i, a in enumerate(args2par)]
     else:
-        inputs = zip(*args2par)
+        inputs = args2par
+
+    # argsnotpar = [list(args[args2parallelize:])]*len(args2par)
+    # if len(argsnotpar[0]) != 0:
+    #     inputs = zip(*args2par, *argsnotpar)
+    # else:
+    #     inputs = zip(*args2par)
     with Pool() as p:
         out = p.starmap(func, inputs)
     
