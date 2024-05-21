@@ -3,8 +3,8 @@ from multiprocessing import Pool
 from time import sleep
 
 
-print('testing')
-sleep(1)
+# print('testing')
+# sleep(1)
 
 def smart_parallelize(func, args2parallelize, *args):
     args2par = list(args[:args2parallelize])
