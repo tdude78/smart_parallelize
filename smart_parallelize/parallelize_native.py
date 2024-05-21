@@ -1,5 +1,7 @@
 import numpy as np
-from multiprocessing import Pool
+# from multiprocessing import Pool
+# from pathos.parallel import ParallelPool
+from pathos.multiprocessing import Pool
 from time import sleep
 
 

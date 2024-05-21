@@ -32,6 +32,9 @@ def f4(x):
     return x,y
 
 def f5(x, y, z, w):
+
+    test = lambda x: x
+    c = test(x)
     
     x = np.array(x)
     y = np.array(y)
@@ -39,6 +42,12 @@ def f5(x, y, z, w):
     w = np.array(w)
     return x+y+z+w
 
+def test_inner():
+    def inner(x):
+        return x
+    x = list(np.ones((20,2)))
+    out = smart_parallelize(inner, 1, x)
+    return out
 
 if __name__ == "__main__":
     import timeit
