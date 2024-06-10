@@ -24,17 +24,12 @@ def smart_parallelize(func, args2parallelize, *args):
     else:
         inputs = args2par
 
-    # argsnotpar = [list(args[args2parallelize:])]*len(args2par)
-    # if len(argsnotpar[0]) != 0:
-    #     inputs = zip(*args2par, *argsnotpar)
-    # else:
-    #     inputs = zip(*args2par)
     with Pool() as p:
         out = p.starmap(func, inputs)
     
     if isinstance(out[0], list) or isinstance(out[0], np.ndarray):
         num_outs = 1
-        out = np.array(out)
+        out = out
         return out
     else:
         num_outs = len(out[0])
@@ -45,7 +40,7 @@ def smart_parallelize(func, args2parallelize, *args):
         for j in range(num_outs):
             out_new[j].append(np.array(out[i][j]))
     for i in range(num_outs):
-        out_new[i] = np.array(out_new[i])
+        out_new[i] = out_new[i]
     out = tuple(out_new)
     return out
 
@@ -93,14 +88,15 @@ if __name__ == "__main__":
     z = 2
     start  = timeit.default_timer()
 
-    a1 = smart_parallelize(f2, 1, x)
-    answer = smart_parallelize(func, 2, x, y)
-    a3 = smart_parallelize(f3, 2, x, y, z)
-    a4 = smart_parallelize(f4, 1, x)
+    # a1 = smart_parallelize(f2, 1, x)
+    # answer = smart_parallelize(func, 2, x, y)
+    # a3 = smart_parallelize(f3, 2, x, y, z)
+    # a4 = smart_parallelize(f4, 1, x)
+    a5 = smart_parallelize(f4, 1, np.ones((7,1)).flatten())
     
     stop  = timeit.default_timer()
     print(stop - start)
-    print(answer)
+    # print(answer)
 
     # for i,x_val in enumerate(x):
     #     print(func(x_val))
