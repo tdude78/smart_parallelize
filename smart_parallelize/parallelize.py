@@ -1,120 +1,120 @@
-# from functools import wraps
+import numpy as np
+from time import sleep
+from pathos.multiprocessing import Pool
 
-# import numpy as np
-# from ray.exceptions import RaySystemError
-# from ray import available_resources, init, remote, get, put
+class parallelize:
+    def __init__(self, func=None, *, args2parallelize=1):
+        self.func = func
+        self.args2parallelize = args2parallelize
+        if func:
+            self.__call__ = self._decorator(func)
 
+    def _decorator(self, func):
+        def wrapper(*args):
+            args2parallelize = self.args2parallelize
+            func = self.func
 
-# def get_mem_func():
-#     try:
-#         MEMORY = available_resources()['memory']
-#     except RaySystemError:
-#         init()
-#         MEMORY = available_resources()['memory']
-#     try:
-#         CPUS = available_resources()['CPU']
-#         MEM_PER_WORKER = (MEMORY / CPUS) * 0.8
-#     except KeyError:
-#         # get number of cores
-#         import multiprocessing
-#         CPUS = multiprocessing.cpu_count()
-#         MEM_PER_WORKER = (MEMORY / CPUS) * 0.8
-#     MEMORY = int(MEMORY)
-#     CPUS   = int(CPUS)
-#     MEM_PER_WORKER = int(MEM_PER_WORKER)
-#     return MEMORY, CPUS, MEM_PER_WORKER
+            args2par = list(args[:args2parallelize])
+            args2par2 = []
+            for i, a in enumerate(args2par[0]):
+                c = []
+                for _ in range(args2parallelize):
+                    c.append(a)
+                args2par2.append(tuple(c))
+            args2par = args2par2
+            argsnotpar = list(([args[args2parallelize:]])) * len(args2par)
 
-# try:
-# 	MEMORY, CPUS, MEM_PER_WORKER = get_mem_func()
-# except RaySystemError:
-# 	MEMORY, CPUS, MEM_PER_WORKER = get_mem_func()
+            if len(argsnotpar[0]) != 0:
+                inputs = [a + argsnotpar[i] for i, a in enumerate(args2par)]
+            else:
+                inputs = args2par
 
+            with Pool() as p:
+                out = p.starmap(func, inputs)
+            return out
 
-# def smart_parallelize(args2parallelize=1):
-#     def decorator(function):
-#         @wraps(function)
-#         def wrapper(**kwargs):
-#             @remote(memory=MEM_PER_WORKER)
-#             def get_results(**kwargs):
-#                 par_args = list(kwargs.keys())[:args2parallelize]
-#                 other_args = list(kwargs.keys())[args2parallelize:]
-#                 data_par_args = [kwargs[i] for i in par_args]
+            # if isinstance(out[0], list) or isinstance(out[0], np.ndarray):
+            #     return out
+            # else:
+            #     num_outs = len(out[0])
+            # out_new = []
+            # for _ in range(num_outs):
+            #     out_new.append([])
+            # for i, _ in enumerate(out):
+            #     for j in range(num_outs):
+            #         out_new[j].append(np.array(out[i][j]))
+            # for i in range(num_outs):
+            #     out_new[i] = out_new[i]
+            # return tuple(out_new)
+        return wrapper
 
-#                 results = []
-#                 for i, _ in enumerate(data_par_args[0]):
-#                     kwargs_0 = kwargs.copy()
-#                     for j, arg in enumerate(par_args):
-#                         kwargs_0[arg] = data_par_args[j][i]
-#                     for k, arg in enumerate(other_args):
-#                         kwargs_0[arg] = kwargs[arg]
-#                     r = function(**kwargs_0)
-#                     results.append(r)
-#                 return results
-            
-#             par_args = list(kwargs.keys())[:args2parallelize]
-#             other_args = list(kwargs.keys())[args2parallelize:]
-#             arg2parallelize_unsplit = [kwargs[i] for i in par_args]
+    def __call__(self, *args, **kwargs):
+        return self._decorator(self.func)(*args, **kwargs)
 
-#             # split into CPUS chunks
-#             split_args = [np.array_split(i, CPUS) for i in arg2parallelize_unsplit]
+def parallelize_decorator(func=None, *, args2parallelize=1):
+    if func:
+        return parallelize(func, args2parallelize=args2parallelize)
+    else:
+        def wrapper(f):
+            return parallelize(f, args2parallelize=args2parallelize)
+        return wrapper
 
-#             workers = []
-#             for i in range(CPUS):
-#                 inp_args = {}
-#                 for j, _ in enumerate(par_args):
-#                     inp_args[par_args[j]] = split_args[j][i]
-                
-#                 for k, _ in enumerate(other_args):
-#                     inp_args[other_args[k]] = kwargs[other_args[k]]
-#                 workers.append(get_results.remote(**inp_args))
-            
-#             test_inp = {}
-#             for j, _ in enumerate(par_args):
-#                 test_inp[par_args[j]] = arg2parallelize_unsplit[j][0]
-#             for k, _ in enumerate(other_args):
-#                 test_inp[other_args[k]] = kwargs[other_args[k]]
+@parallelize_decorator
+def func1(x: int):
+    sleep(0.5)
+    return x
 
-#             output = function(**test_inp)
-#             if not isinstance(output, list) and not isinstance(output, tuple):
-#                 num_outputs = 1
-#             else:
-#                 num_outputs = len(output)
+@parallelize_decorator
+def func2(x: int, y: int):
+    sleep(0.5)
+    return x
 
-#             retval = get(workers)
+@parallelize_decorator
+def func2p5(x: int, y: int):
+    sleep(0.5)
+    return x, y
 
-#             # retval = retval.reshape(len(arg2parallelize_unsplit[0]), num_outputs)
+@parallelize_decorator
+def func3(x:list):
+    sleep(0.5)
+    return x
 
-#             retval = [j for i in retval for j in i]
+@parallelize_decorator
+def func4(x: list, y: int):
+    sleep(0.5)
+    return x
 
-#             if num_outputs != 1:
-#                 outputs = []
-#                 for i in range(num_outputs):
-#                     outputs.append([])
-#                 for i, _ in enumerate(retval):
-#                     for j, _ in enumerate(retval[i]):
-#                         outputs[j].append(retval[i][j])
-#                 retval = outputs
-#                 for i in range(num_outputs):
-#                     outputs[i] = np.array(outputs[i])
-#             else:
-#                 retval = np.array(retval)
-#             return retval
-#         return wrapper
-#     return decorator
+@parallelize_decorator
+def func4p5(x: list, y: int):
+    sleep(0.5)
+    return x, y
+
+@parallelize_decorator(args2parallelize=2)
+def func5(x: list, y: list):
+    sleep(0.5)
+    return x
+
+@parallelize_decorator(args2parallelize=2)
+def func5p5(x: list, y: list):
+    sleep(0.5)
+    return x, y
 
 
-# if __name__ == "__main__":
-#     import timeit
+if __name__ == "__main__":
+    x_int = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    y_int = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 
-#     @smart_parallelize(args2parallelize=1)
-#     def func(x, y):
-#         return x
-    
-#     x = np.ones((31,2))
-#     # y = np.ones((30,))*2
-#     y = 2
-#     start  = timeit.default_timer()
-#     answer = func(x=x, y=y)
-#     stop  = timeit.default_timer()
-#     print(stop - start)
-#     print(answer)
+    x_list = [x_int, x_int, x_int, x_int, x_int, x_int, x_int, x_int, x_int, x_int]
+    y_list = [x_int, x_int, x_int, x_int, x_int, x_int, x_int, x_int, x_int, x_int]
+
+    x_singleint = 1
+    y_singleint = 1
+
+    print(func1(x_int))
+    print(func2(x_int, y_singleint))
+    print(func2p5(x_int, y_singleint))
+    print(func3(x_list))
+    print(func4(x_list, y_int))
+    print(func4p5(x_list, y_int))
+    print(func5(x_list, y_list))
+    print(func5p5(x_list, y_list))
