@@ -1,11 +1,14 @@
-import numpy as np
 from time import sleep
+
 from pathos.multiprocessing import Pool
 
-class parallelize:
-    def __init__(self, func=None, *, args2parallelize=1):
+
+class _parallelize:
+    def __init__(self, func=None, *, args2parallelize=1, DEBUG=False):
         self.func = func
         self.args2parallelize = args2parallelize
+
+        self.DEBUG = DEBUG
         if func:
             self.__call__ = self._decorator(func)
 
@@ -18,8 +21,8 @@ class parallelize:
             args2par2 = []
             for i, a in enumerate(args2par[0]):
                 c = []
-                for _ in range(args2parallelize):
-                    c.append(a)
+                for j in range(args2parallelize):
+                    c.append(args2par[j][i])
                 args2par2.append(tuple(c))
             args2par = args2par2
             argsnotpar = list(([args[args2parallelize:]])) * len(args2par)
@@ -29,34 +32,24 @@ class parallelize:
             else:
                 inputs = args2par
 
-            with Pool() as p:
-                out = p.starmap(func, inputs)
+            debug = self.DEBUG
+            if not debug:
+                with Pool() as p:
+                    out = p.starmap(func, inputs)
+            else:
+                out = [func(*a) for a in inputs]
             return out
-
-            # if isinstance(out[0], list) or isinstance(out[0], np.ndarray):
-            #     return out
-            # else:
-            #     num_outs = len(out[0])
-            # out_new = []
-            # for _ in range(num_outs):
-            #     out_new.append([])
-            # for i, _ in enumerate(out):
-            #     for j in range(num_outs):
-            #         out_new[j].append(np.array(out[i][j]))
-            # for i in range(num_outs):
-            #     out_new[i] = out_new[i]
-            # return tuple(out_new)
         return wrapper
 
     def __call__(self, *args, **kwargs):
         return self._decorator(self.func)(*args, **kwargs)
 
-def parallelize_decorator(func=None, *, args2parallelize=1):
+def parallelize_decorator(func=None, *, args2parallelize=1, DEBUG=False):
     if func:
-        return parallelize(func, args2parallelize=args2parallelize)
+        return _parallelize(func, args2parallelize=args2parallelize, DEBUG=DEBUG)
     else:
         def wrapper(f):
-            return parallelize(f, args2parallelize=args2parallelize)
+            return _parallelize(f, args2parallelize=args2parallelize, DEBUG=DEBUG)
         return wrapper
 
 @parallelize_decorator
